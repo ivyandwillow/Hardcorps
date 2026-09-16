@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flow — class builder</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1F2320;
+    --bone:#F1ECE1;
+    --bone-dim:#E7E0D2;
+    --paper:#FBF9F4;
+    --sage:#6E7F5C;
+    --sage-dark:#57694A;
+    --clay:#B5533C;
+    --white-spring:#FFFFFF;
+    --black-spring:#232323;
+    --line:#D9D2C1;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bone);color:var(--ink);}
+  body{min-height:100vh;}
+  h1,h2,h3,.serif{font-family:'Fraunces', Georgia, serif;}
+  .wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px;}
+  header.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px;}
+  header.top h1{font-size:2.1rem;font-weight:600;margin:0;letter-spacing:-0.01em;}
+  header.top p{margin:4px 0 0;color:#5b6058;font-size:0.95rem;}
+  .grid{display:grid;grid-template-columns:1fr;gap:28px;}
+  @media(min-width:880px){ .grid{grid-template-columns: 300px 1fr;} }
+
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:20px;}
+  .panel + .panel{margin-top:20px;}
+  .panel h2{font-size:1.05rem;margin:0 0 14px;font-weight:600;}
+  label{display:block;font-size:0.8rem;color:#5b6058;margin:14px 0 4px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=number], select{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;
+    font-family:inherit;font-size:0.9rem;background:#fff;color:var(--ink);
+  }
+  input[type=checkbox]{width:16px;height:16px;vertical-align:-3px;margin-right:6px;}
+  .row{display:flex;gap:10px;align-items:center;}
+  .row.between{justify-content:space-between;}
+  .hint{font-size:0.78rem;color:#7a7f75;margin-top:4px;line-height:1.4;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--sage);color:#fff;border:none;border-radius:6px;
+    padding:10px 16px;font-size:0.88rem;font-weight:600;cursor:pointer;
+    font-family:inherit;transition:background .15s ease;
+  }
+  .btn:hover{background:var(--sage-dark);}
+  .btn:disabled{background:#b9beb0;cursor:not-allowed;}
+  .btn.ghost{background:transparent;color:var(--sage-dark);border:1px solid var(--sage);}
+  .btn.ghost:hover{background:#e9ede4;}
+  .btn.small{padding:5px 10px;font-size:0.76rem;}
+  .btn.block{width:100%;margin-top:14px;}
+  .status{font-size:0.78rem;padding:8px 10px;border-radius:6px;margin-top:10px;line-height:1.4;}
+  .status.ok{background:#e9ede4;color:var(--sage-dark);}
+  .status.err{background:#f5e4e0;color:var(--clay);}
+  .status.wait{background:var(--bone-dim);color:#5b6058;}
+
+  .count-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bone-dim);}
+  .count-row:last-child{border-bottom:none;}
+  .count-row .name{font-size:0.86rem;}
+  .stepper{display:flex;align-items:center;gap:8px;}
+  .stepper button{width:24px;height:24px;border-radius:5px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:0.9rem;line-height:1;}
+  .stepper span{min-width:14px;text-align:center;font-variant-numeric:tabular-nums;font-size:0.88rem;}
+
+  .timeline{position:relative;padding-left:6px;}
+  .block-card{
+    position:relative;background:var(--paper);border:1px solid var(--line);
+    border-left:5px solid var(--sage);border-radius:8px;padding:16px 18px;margin-bottom:14px;
+  }
+  .block-card.cooldown{border-left-color:#8b8f84;}
+  .block-card.warmup{border-left-color:#a8813c;}
+  .block-card.finisher{border-left-color:var(--clay);}
+  .block-card .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .block-card .label{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:500;}
+  .block-card .meta{font-size:0.74rem;color:#7a7f75;}
+  .move-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:9px 0;border-top:1px solid var(--bone-dim);flex-wrap:wrap;
+  }
+  .move-row .info{display:flex;flex-direction:column;gap:2px;}
+  .move-row .mv-name{font-size:0.92rem;font-weight:500;}
+  .move-row .mv-tags{font-size:0.74rem;color:#7a7f75;}
+  .move-row .mv-details{font-size:0.76rem;color:#5b6058;font-style:italic;}
+  .move-row .song{font-size:0.76rem;color:var(--sage-dark);}
+  .move-row .actions{display:flex;gap:6px;}
+  .icon-btn{
+    background:none;border:1px solid var(--line);border-radius:5px;width:26px;height:26px;
+    cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;color:#5b6058;
+  }
+  .icon-btn:hover{background:var(--bone-dim);}
+  .spring-tag{
+    display:inline-block;font-size:0.68rem;font-weight:600;letter-spacing:.01em;
+    padding:1px 7px;border-radius:20px;border:1px solid var(--line);
+  }
+  .spring-tag.w{background:var(--white-spring);color:#333;}
+  .spring-tag.b{background:var(--black-spring);color:#fff;}
+  .spring-tag.n{background:var(--bone-dim);color:#7a7f75;}
+
+  .empty{
+    text-align:center;color:#7a7f75;padding:50px 20px;border:1px dashed var(--line);
+    border-radius:10px;font-size:0.92rem;
+  }
+  .foot-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+  a.link{color:var(--sage-dark);}
+  .playlist-result{margin-top:12px;padding:12px 14px;background:#e9ede4;border-radius:8px;font-size:0.86rem;}
+  .total{font-size:0.8rem;color:#5b6058;margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Flow</h1>
+      <p>Class flow &amp; playlist builder</p>
+    </div>
+    <div id="spotifyBadge"></div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: config + controls -->
+    <div>
+      <div class="panel">
+        <h2>Move library</h2>
+        <label for="sheetId">Google Sheet ID or URL</label>
+        <input type="text" id="sheetId" placeholder="Paste the sheet link or ID" />
+        <div class="hint">Sheet needs 3 columns: <b>Block</b>, <b>Exercise</b>, <b>Springs</b>. Must be shared as "Anyone with the link."</div>
+        <button class="btn block" id="loadSheetBtn">Load moves</button>
+        <div id="sheetStatus"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Spotify</h2>
+        <div id="spotifyConfig">
+          <label for="spClientId">Client ID</label>
+          <input type="text" id="spClientId" placeholder="From developer.spotify.com" />
+          <div class="hint">Register a free app at <a class="link" href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a>. Set its Redirect URI to exactly:<br><code id="redirectUriDisplay" style="word-break:break-all;"></code></div>
+          <button class="btn block ghost" id="connectSpotifyBtn">Connect Spotify</button>
+        </div>
+        <div id="spotifyStatus"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Class shape</h2>
+        <label class="row" style="margin-top:0;">
+          <input type="checkbox" id="includeFinisher" checked />
+          <span style="font-size:0.86rem;">Include a finisher</span>
+        </label>
+        <div id="blockCounts" style="margin-top:10px;"></div>
+        <div class="hint">Warm up is always first, cool down (fixed 2 min) always last. Leg blocks run as a full left-leg block plus a full right-leg block, 3–4 moves each. Everything else is one move per block.</div>
+        <button class="btn block" id="generateBtn" disabled>Generate flow</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: flow display -->
+    <div>
+      <div id="flowArea">
+        <div class="empty">Load your move library, then generate a flow to see it here.</div>
+      </div>
+      <div id="playlistArea"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------------------------------------------------
+   CONSTANTS
+--------------------------------------------------------- */
+const BLOCK_TYPES = ["warm_up","center_core","leg","upper_body","obliques","finisher","cool_down"];
+const BLOCK_LABELS = {
+  warm_up:"Warm up", center_core:"Center core", leg:"Leg", upper_body:"Upper body",
+  obliques:"Obliques", finisher:"Finisher", cool_down:"Cool down"
+};
+// middle blocks the person can stack freely (leg counted as pairs)
+const STACKABLE = ["center_core","leg","upper_body","obliques"];
+const COOLDOWN_SECONDS = 120;
+const REDIRECT_URI = location.origin + location.pathname;
+document.getElementById("redirectUriDisplay").textContent = REDIRECT_URI;
+
+/* ---------------------------------------------------------
+   STATE
+--------------------------------------------------------- */
+let moveLibrary = { warm_up:[], center_core:[], leg:[], upper_body:[], obliques:[], finisher:[], cool_down:[] };
+let currentFlow = null; // array of block objects
+let spotifyToken = localStorage.getItem("flow_sp_token") || null;
+let spotifyTokenExpiry = Number(localStorage.getItem("flow_sp_expiry") || 0);
+
+/* ---------------------------------------------------------
+   UTIL
+--------------------------------------------------------- */
+function el(tag, attrs={}, ...children){
+  const n = document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs)){
+    if(k==="class") n.className=v;
+    else if(k.startsWith("on") && typeof v==="function") n.addEventListener(k.slice(2), v);
+    else if(k==="html") n.innerHTML=v;
+    else n.setAttribute(k,v);
+  }
+  children.flat().forEach(c=>{
+    if(c==null) return;
+    n.appendChild(typeof c==="string" ? document.createTextNode(c) : c);
+  });
+  return n;
+}
+function extractSheetId(input){
+  input = input.trim();
+  const m = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : input;
+}
+function pickRandom(arr, n=1){
+  const pool = [...arr];
+  const out = [];
+  for(let i=0;i<n && pool.length;i++){
+    const idx = Math.floor(Math.random()*pool.length);
+    out.push(pool.splice(idx,1)[0]);
+  }
+  return out;
+}
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function fmtDuration(sec){
+  const m = Math.floor(sec/60), s = Math.round(sec%60);
+  return `${m}:${String(s).padStart(2,"0")}`;
+}
+function springTag(raw){
+  const v = (raw||"").trim();
+  if(!v) return el("span",{class:"spring-tag n"},"tbd");
+  const m = v.match(/^(\d+)\s*([wb])$/i);
+  if(m){
+    const cls = m[2].toLowerCase()==="w" ? "w" : "b";
+    const word = cls==="w" ? "white" : "black";
+    return el("span",{class:`spring-tag ${cls}`}, `${m[1]} ${word}`);
+  }
+  return el("span",{class:"spring-tag n"}, v);
+}
+function normalizeBlockName(raw){
+  const v = (raw||"").trim().toLowerCase().replace(/[\s_-]+/g," ");
+  if(/warm/.test(v)) return "warm_up";
+  if(/cool/.test(v)) return "cool_down";
+  if(/finish/.test(v)) return "finisher";
+  if(/oblique/.test(v)) return "obliques";
+  if(/upper/.test(v)) return "upper_body";
+  if(/leg/.test(v)) return "leg";
+  if(/core/.test(v)) return "center_core";
+  return null;
+}
+
+/* ---------------------------------------------------------
+   SHEET LOADING
+--------------------------------------------------------- */
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field+='"'; i++; } else { inQuotes=false; }
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field=""; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=""; }
+      else if(c === '\r'){ /* skip */ }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+async function loadSheet(){
+  const raw = document.getElementById("sheetId").value;
+  const statusEl = document.getElementById("sheetStatus");
+  if(!raw){ statusEl.innerHTML=""; statusEl.appendChild(el("div",{class:"status err"},"Paste a sheet link or ID first.")); return; }
+  const id = extractSheetId(raw);
+  const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
+  statusEl.innerHTML = "";
+  statusEl.appendChild(el("div",{class:"status wait"},"Loading…"));
+  try{
+    const res = await fetch(url);
+    if(!res.ok) throw new Error("fetch failed");
+    const text = await res.text();
+    const rows = parseCSV(text).filter(r=>r.some(c=>c && c.trim()));
+    if(rows.length < 2) throw new Error("empty");
+    const header = rows[0].map(h=>h.trim().toLowerCase());
+    const blockIdx = header.indexOf("block");
+    const exIdx = header.indexOf("exercise");
+    const springIdx = header.indexOf("springs");
+    if(blockIdx===-1 || exIdx===-1) throw new Error("bad header");
+    const locationIdx = header.findIndex(h=>h.includes("location"));
+    const faceIdx = header.findIndex(h=>h.includes("face"));
+    const equipIdx = header.findIndex(h=>h.includes("strap")||h.includes("equipment"));
+
+    const lib = { warm_up:[], center_core:[], leg:[], upper_body:[], obliques:[], finisher:[], cool_down:[] };
+    let skipped = 0;
+    for(const r of rows.slice(1)){
+      const blockRaw = r[blockIdx];
+      const name = (r[exIdx]||"").trim();
+      const springs = springIdx!==-1 ? (r[springIdx]||"").trim() : "";
+      const location = locationIdx!==-1 ? (r[locationIdx]||"").trim() : "";
+      const face = faceIdx!==-1 ? (r[faceIdx]||"").trim() : "";
+      const equipment = equipIdx!==-1 ? (r[equipIdx]||"").trim() : "";
+      if(!name){ continue; }
+      const type = normalizeBlockName(blockRaw);
+      if(!type){ skipped++; continue; }
+      lib[type].push({ name, springs, location, face, equipment });
+    }
+    moveLibrary = lib;
+    const counts = BLOCK_TYPES.map(t=>`${BLOCK_LABELS[t]}: ${lib[t].length}`).join(" · ");
+    statusEl.innerHTML = "";
+    statusEl.appendChild(el("div",{class:"status ok"}, `Loaded. ${counts}` + (skipped?` (${skipped} rows had an unrecognized block name and were skipped)`:"")));
+    document.getElementById("generateBtn").disabled = false;
+    buildBlockCountControls();
+  } catch(e){
+    statusEl.innerHTML = "";
+    statusEl.appendChild(el("div",{class:"status err"},
+      "Couldn't load that sheet. Make sure it's shared as \"Anyone with the link\" and has a tab named Sheet1 (or use File → Share → Publish to web → CSV and paste that link instead)."));
+  }
+}
+document.getElementById("loadSheetBtn").addEventListener("click", loadSheet);
+
+/* ---------------------------------------------------------
+   BLOCK COUNT CONTROLS (how many of each stackable block)
+--------------------------------------------------------- */
+let blockCounts = { center_core:2, leg:1, upper_body:2, obliques:1 }; // leg count = number of L/R pairs
+function buildBlockCountControls(){
+  const wrap = document.getElementById("blockCounts");
+  wrap.innerHTML = "";
+  const rows = [
+    ["center_core","Center core blocks"],
+    ["leg","Leg pairs (L + R)"],
+    ["upper_body","Upper body blocks"],
+    ["obliques","Oblique blocks"],
+  ];
+  rows.forEach(([key,label])=>{
+    const span = el("span",{class:"name"}, label);
+    const countSpan = el("span",{}, String(blockCounts[key]));
+    const minus = el("button",{onclick:()=>{ blockCounts[key]=Math.max(0,blockCounts[key]-1); countSpan.textContent=blockCounts[key]; }}, "–");
+    const plus = el("button",{onclick:()=>{ blockCounts[key]=Math.min(8,blockCounts[key]+1); countSpan.textContent=blockCounts[key]; }}, "+");
+    wrap.appendChild(el("div",{class:"count-row"}, span, el("div",{class:"stepper"}, minus, countSpan, plus)));
+  });
+}
+buildBlockCountControls();
+
+/* ---------------------------------------------------------
+   FLOW GENERATION
+--------------------------------------------------------- */
+function usedTracker(){
+  const used = {};
+  return {
+    take(type, n){
+      used[type] = used[type] || new Set();
+      const pool = moveLibrary[type] || [];
+      const avail = pool.filter(m=>!used[type].has(m.name));
+      const source = avail.length >= n ? avail : pool; // reset if we run out
+      if(avail.length < n) used[type] = new Set();
+      const picked = pickRandom(source, n);
+      picked.forEach(m=>used[type].add(m.name));
+      return picked;
+    }
+  };
+}
+
+function generateFlow(){
+  const includeFinisher = document.getElementById("includeFinisher").checked;
+  const tracker = usedTracker();
+  const blocks = [];
+
+  // Warm up — always first
+  blocks.push({ type:"warm_up", moves: tracker.take("warm_up",1) });
+
+  // Build the stackable middle, then shuffle order
+  const middle = [];
+  for(let i=0;i<blockCounts.center_core;i++) middle.push({type:"center_core", moves: tracker.take("center_core",1)});
+  for(let i=0;i<blockCounts.upper_body;i++) middle.push({type:"upper_body", moves: tracker.take("upper_body",1)});
+  for(let i=0;i<blockCounts.obliques;i++) middle.push({type:"obliques", moves: tracker.take("obliques",1)});
+  for(let i=0;i<blockCounts.leg;i++){
+    const n = 3 + Math.round(Math.random()); // 3 or 4
+    const legMoves = tracker.take("leg", n);
+    middle.push({type:"leg", side:"left", moves: legMoves});
+    middle.push({type:"leg", side:"right", moves: legMoves}); // same moves, other side
+  }
+  blocks.push(...shuffle(middle));
+
+  // Finisher — right before cool down
+  if(includeFinisher && moveLibrary.finisher.length){
+    blocks.push({ type:"finisher", moves: tracker.take("finisher",1) });
+  }
+
+  // Cool down — always last, fixed duration, no song matching
+  blocks.push({ type:"cool_down", moves: moveLibrary.cool_down.length ? tracker.take("cool_down",1) : [{name:"Cool down", springs:""}], fixed: COOLDOWN_SECONDS });
+
+  currentFlow = blocks;
+  renderFlow();
+}
+document.getElementById("generateBtn").addEventListener("click", generateFlow);
+
+/* ---------------------------------------------------------
+   RENDER FLOW
+--------------------------------------------------------- */
+function blockSongCount(block){
+  if(block.fixed) return 0;
+  return block.moves.length;
+}
+function renderFlow(){
+  const area = document.getElementById("flowArea");
+  area.innerHTML = "";
+  if(!currentFlow){ area.appendChild(el("div",{class:"empty"},"Generate a flow to see it here.")); return; }
+
+  const totalSongs = currentFlow.reduce((s,b)=>s+blockSongCount(b),0);
+  const summary = el("div",{class:"total"}, `${currentFlow.length} blocks · ${totalSongs} songs needed · ~2 min fixed cool down`);
+  area.appendChild(summary);
+
+  const tl = el("div",{class:"timeline"});
+  currentFlow.forEach((block, bi)=>{
+    tl.appendChild(renderBlockCard(block, bi));
+  });
+  area.appendChild(tl);
+
+  const actions = el("div",{class:"foot-actions"},
+    el("button",{class:"btn ghost", onclick:generateFlow}, "Regenerate whole flow"),
+    el("button",{class:"btn", id:"buildPlaylistBtn", onclick:openPlaylistBuilder}, "Build Spotify playlist")
+  );
+  area.appendChild(actions);
+}
+
+function renderBlockCard(block, bi){
+  const cls = ["warm_up","cool_down","finisher"].includes(block.type) ? block.type.replace("_","") : "";
+  const sideLabel = block.side ? ` — ${block.side} leg` : "";
+  const card = el("div",{class:`block-card ${cls}`});
+  const head = el("div",{class:"head"},
+    el("div",{class:"label"}, `${BLOCK_LABELS[block.type]}${sideLabel}`),
+    el("div",{class:"meta"}, block.fixed ? fmtDuration(block.fixed) : `${block.moves.length} song${block.moves.length>1?"s":""}`)
+  );
+  card.appendChild(head);
+
+  if(!block.fixed){
+    const regen = el("button",{class:"btn ghost small", style:"margin-top:8px;", onclick:()=>{
+      const n = block.moves.length;
+      const tracker = usedTracker(); // local — doesn't dedupe against rest of class on manual regen, fine for a single-block tweak
+      block.moves = pickRandom(moveLibrary[block.type], n);
+      renderFlow();
+    }}, "Regenerate this block");
+    card.appendChild(regen);
+  }
+
+  block.moves.forEach((mv, mi)=>{
+    const row = el("div",{class:"move-row"},
+      el("div",{class:"info"},
+        el("div",{class:"mv-name"}, mv.name),
+        el("div",{class:"mv-tags"}, springTag(mv.springs)),
+        (mv.location||mv.face||mv.equipment) ? el("div",{class:"mv-details"}, [mv.location, mv.face, mv.equipment].filter(Boolean).join(" · ")) : null,
+        mv.track ? el("div",{class:"song"}, `♪ ${mv.track.name} — ${mv.track.artist} (${fmtDuration(mv.track.duration_ms/1000)})`) : null
+      ),
+      block.fixed ? null : el("div",{class:"actions"},
+        el("button",{class:"icon-btn", title:"Swap move", onclick:()=>swapMove(block, mi)}, "⇄")
+      )
+    );
+    card.appendChild(row);
+  });
+  return card;
+}
+
+function swapMove(block, mi){
+  const pool = moveLibrary[block.type];
+  if(!pool || !pool.length) return;
+  const current = block.moves[mi].name;
+  const options = pool.filter(m=>m.name!==current);
+  if(!options.length) return;
+  block.moves[mi] = pickRandom(options,1)[0];
+  renderFlow();
+}
+
+/* ---------------------------------------------------------
+   SPOTIFY — PKCE auth
+--------------------------------------------------------- */
+function randString(len){
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let s = "";
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  for(let i=0;i<len;i++) s += chars[arr[i]%chars.length];
+  return s;
+}
+async function sha256base64url(input){
+  const data = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  let str = "";
+  new Uint8Array(digest).forEach(b=>str+=String.fromCharCode(b));
+  return btoa(str).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function updateSpotifyBadge(){
+  const badge = document.getElementById("spotifyBadge");
+  badge.innerHTML = "";
+  if(spotifyToken && Date.now() < spotifyTokenExpiry){
+    badge.appendChild(el("span",{class:"status ok", style:"padding:6px 12px;"},"Spotify connected"));
+  }
+}
+async function connectSpotify(){
+  const clientId = document.getElementById("spClientId").value.trim();
+  const statusEl = document.getElementById("spotifyStatus");
+  if(!clientId){
+    statusEl.innerHTML=""; statusEl.appendChild(el("div",{class:"status err"},"Enter your Spotify Client ID first."));
+    return;
+  }
+  localStorage.setItem("flow_sp_client_id", clientId);
+  const verifier = randString(64);
+  sessionStorage.setItem("flow_sp_verifier", verifier);
+  const challenge = await sha256base64url(verifier);
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: "code",
+    redirect_uri: REDIRECT_URI,
+    code_challenge_method: "S256",
+    code_challenge: challenge,
+    scope: "playlist-modify-public playlist-modify-private"
+  });
+  location.href = "https://accounts.spotify.com/authorize?" + params.toString();
+}
+document.getElementById("connectSpotifyBtn").addEventListener("click", connectSpotify);
+
+async function handleSpotifyCallback(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get("code");
+  if(!code) return;
+  const clientId = localStorage.getItem("flow_sp_client_id");
+  const verifier = sessionStorage.getItem("flow_sp_verifier");
+  const statusEl = document.getElementById("spotifyStatus");
+  if(!clientId || !verifier){ return; }
+  statusEl.innerHTML=""; statusEl.appendChild(el("div",{class:"status wait"},"Finishing Spotify connection…"));
+  try{
+    const body = new URLSearchParams({
+      grant_type:"authorization_code", code, redirect_uri:REDIRECT_URI,
+      client_id:clientId, code_verifier:verifier
+    });
+    const res = await fetch("https://accounts.spotify.com/api/token",{
+      method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body
+    });
+    if(!res.ok) throw new Error("token exchange failed");
+    const data = await res.json();
+    spotifyToken = data.access_token;
+    spotifyTokenExpiry = Date.now() + (data.expires_in*1000);
+    localStorage.setItem("flow_sp_token", spotifyToken);
+    localStorage.setItem("flow_sp_expiry", String(spotifyTokenExpiry));
+    if(data.refresh_token) localStorage.setItem("flow_sp_refresh", data.refresh_token);
+    statusEl.innerHTML=""; statusEl.appendChild(el("div",{class:"status ok"},"Connected to Spotify."));
+    updateSpotifyBadge();
+    history.replaceState({}, "", REDIRECT_URI);
+  } catch(e){
+    statusEl.innerHTML=""; statusEl.appendChild(el("div",{class:"status err"},"Couldn't finish connecting to Spotify. Try again."));
+  }
+}
+
+/* ---------------------------------------------------------
+   SPOTIFY — playlist building
+--------------------------------------------------------- */
+async function spotifyFetch(path, opts={}){
+  const res = await fetch(`https://api.spotify.com/v1${path}`, {
+    ...opts,
+    headers: { ...(opts.headers||{}), Authorization:`Bearer ${spotifyToken}`, "Content-Type":"application/json" }
+  });
+  if(!res.ok){ const t = await res.text(); throw new Error(`Spotify API error: ${res.status} ${t}`); }
+  return res.status===204 ? null : res.json();
+}
+function extractPlaylistId(input){
+  input = input.trim();
+  const m = input.match(/playlist\/([a-zA-Z0-9]+)/);
+  return m ? m[1] : input;
+}
+
+function openPlaylistBuilder(){
+  const area = document.getElementById("playlistArea");
+  area.innerHTML = "";
+  if(!spotifyToken || Date.now() > spotifyTokenExpiry){
+    area.appendChild(el("div",{class:"panel"},
+      el("h2",{},"Build Spotify playlist"),
+      el("div",{class:"status err"},"Connect Spotify first (left panel), then come back here.")
+    ));
+    return;
+  }
+  const sourceInput = el("input",{type:"text", placeholder:"Paste a Spotify playlist link to pull songs from"});
+  const nameInput = el("input",{type:"text", placeholder:"New playlist name", value:`Class flow — ${new Date().toLocaleDateString()}`});
+  const goBtn = el("button",{class:"btn block", onclick:()=>buildPlaylist(sourceInput.value, nameInput.value, area)}, "Match songs & create playlist");
+  area.appendChild(el("div",{class:"panel"},
+    el("h2",{},"Build Spotify playlist"),
+    el("label",{},"Source playlist"),
+    sourceInput,
+    el("div",{class:"hint"},"Songs are pulled from this playlist, in order, one per move (leg blocks use 3–4 in a row)."),
+    el("label",{},"New playlist name"),
+    nameInput,
+    goBtn
+  ));
+}
+
+async function buildPlaylist(sourceUrl, playlistName, area){
+  if(!sourceUrl){ alert("Paste a source playlist link first."); return; }
+  const btn = area.querySelector("button.btn.block");
+  btn.disabled = true; btn.textContent = "Fetching songs…";
+  try{
+    const playlistId = extractPlaylistId(sourceUrl);
+    let tracks = [];
+    let next = `/playlists/${playlistId}/tracks?limit=100`;
+    while(next){
+      const data = await spotifyFetch(next.replace("https://api.spotify.com/v1",""));
+      tracks.push(...data.items.filter(it=>it.track).map(it=>({
+        uri: it.track.uri, name: it.track.name,
+        artist: (it.track.artists||[]).map(a=>a.name).join(", "),
+        duration_ms: it.track.duration_ms
+      })));
+      next = data.next;
+    }
+    if(!tracks.length) throw new Error("No tracks found in that playlist.");
+
+    // assign tracks to moves in flow order
+    const shuffled = shuffle(tracks);
+    let ti = 0;
+    const nextTrack = () => { const t = shuffled[ti % shuffled.length]; ti++; return t; };
+    currentFlow.forEach(block=>{
+      if(block.fixed) return;
+      block.moves.forEach(mv=>{ mv.track = nextTrack(); });
+    });
+    renderFlow();
+
+    btn.textContent = "Creating playlist on Spotify…";
+    const me = await spotifyFetch("/me");
+    const playlist = await spotifyFetch(`/users/${me.id}/playlists`, {
+      method:"POST",
+      body: JSON.stringify({ name: playlistName || "Class flow", description:"Generated with Flow", public:false })
+    });
+    const uris = [];
+    currentFlow.forEach(block=>{ if(!block.fixed) block.moves.forEach(mv=>{ if(mv.track) uris.push(mv.track.uri); }); });
+    for(let i=0;i<uris.length;i+=100){
+      await spotifyFetch(`/playlists/${playlist.id}/tracks`, { method:"POST", body: JSON.stringify({ uris: uris.slice(i,i+100) }) });
+    }
+    area.innerHTML = "";
+    area.appendChild(el("div",{class:"panel"},
+      el("h2",{},"Playlist created"),
+      el("div",{class:"playlist-result"},
+        `"${playlist.name}" is live on your Spotify. `,
+        el("a",{class:"link", href:playlist.external_urls.spotify, target:"_blank", rel:"noopener"}, "Open in Spotify ↗")
+      )
+    ));
+  } catch(e){
+    btn.disabled = false; btn.textContent = "Match songs & create playlist";
+    alert("Something went wrong: " + e.message);
+  }
+}
+
+/* ---------------------------------------------------------
+   INIT
+--------------------------------------------------------- */
+if(localStorage.getItem("flow_sheet_id")) document.getElementById("sheetId").value = localStorage.getItem("flow_sheet_id");
+document.getElementById("sheetId").addEventListener("change", e=>localStorage.setItem("flow_sheet_id", e.target.value));
+if(localStorage.getItem("flow_sp_client_id")) document.getElementById("spClientId").value = localStorage.getItem("flow_sp_client_id");
+updateSpotifyBadge();
+handleSpotifyCallback();
+</script>
+</body>
+</html>
