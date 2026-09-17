@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flow — class builder</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1F2320; --bone:#F1ECE1; --bone-dim:#E7E0D2; --paper:#FBF9F4;
+    --sage:#6E7F5C; --sage-dark:#57694A; --clay:#B5533C;
+    --line:#D9D2C1;
+    font-family:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bone);color:var(--ink);}
+  h1,h2,h3{font-family:'Fraunces',Georgia,serif;}
+  .wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px;}
+  header.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:28px;}
+  header.top h1{font-size:2.1rem;font-weight:600;margin:0;letter-spacing:-0.01em;}
+  header.top p{margin:4px 0 0;color:#5b6058;font-size:0.95rem;}
+  .grid{display:grid;grid-template-columns:1fr;gap:28px;}
+  @media(min-width:880px){.grid{grid-template-columns:300px 1fr;}}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:20px;}
+  .panel+.panel{margin-top:20px;}
+  .panel h2{font-size:1.05rem;margin:0 0 14px;font-weight:600;}
+  label{display:block;font-size:0.8rem;color:#5b6058;margin:14px 0 4px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text],input[type=number],select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:0.9rem;background:#fff;color:var(--ink);}
+  input[type=checkbox]{width:16px;height:16px;vertical-align:-3px;margin-right:6px;}
+  .row{display:flex;gap:10px;align-items:center;}
+  .hint{font-size:0.78rem;color:#7a7f75;margin-top:4px;line-height:1.4;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--sage);color:#fff;border:none;border-radius:6px;padding:10px 16px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;}
+  .btn:hover{background:var(--sage-dark);}
+  .btn:disabled{background:#b9beb0;cursor:not-allowed;}
+  .btn.ghost{background:transparent;color:var(--sage-dark);border:1px solid var(--sage);}
+  .btn.ghost:hover{background:#e9ede4;}
+  .btn.small{padding:5px 10px;font-size:0.76rem;}
+  .btn.block{width:100%;margin-top:14px;}
+  .status{font-size:0.78rem;padding:8px 10px;border-radius:6px;margin-top:10px;line-height:1.4;}
+  .status.ok{background:#e9ede4;color:var(--sage-dark);}
+  .status.err{background:#f5e4e0;color:var(--clay);}
+  .status.wait{background:var(--bone-dim);color:#5b6058;}
+  .count-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bone-dim);}
+  .count-row:last-child{border-bottom:none;}
+  .count-row .name{font-size:0.86rem;}
+  .stepper{display:flex;align-items:center;gap:8px;}
+  .stepper button{width:24px;height:24px;border-radius:5px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:0.9rem;line-height:1;}
+  .stepper span{min-width:14px;text-align:center;font-variant-numeric:tabular-nums;font-size:0.88rem;}
+  .block-card{background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--sage);border-radius:8px;padding:16px 18px;margin-bottom:14px;}
+  .block-card.warm_up{border-left-color:#a8813c;}
+  .block-card.cool_down{border-left-color:#8b8f84;}
+  .block-card.finisher{border-left-color:var(--clay);}
+  .block-card .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .block-card .label{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:500;}
+  .block-card .meta{font-size:0.74rem;color:#7a7f75;}
+  .slot{border-top:1px solid var(--bone-dim);padding:10px 0 8px;}
+  .slot-song{font-size:0.78rem;color:var(--sage-dark);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+  .slot-song .nosong{color:#a09a8c;font-style:italic;}
+  .move-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:5px 0;flex-wrap:wrap;}
+  .move-row .info{display:flex;flex-direction:column;gap:2px;}
+  .mv-name{font-size:0.92rem;font-weight:500;}
+  .mv-tags{font-size:0.74rem;color:#7a7f75;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .mv-details{font-size:0.76rem;color:#5b6058;font-style:italic;}
+  .icon-btn{background:none;border:1px solid var(--line);border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;color:#5b6058;flex-shrink:0;}
+  .icon-btn:hover{background:var(--bone-dim);}
+  .spring-tag{display:inline-block;font-size:0.68rem;font-weight:600;padding:1px 7px;border-radius:20px;border:1px solid var(--line);}
+  .spring-tag.w{background:#fff;color:#333;}
+  .spring-tag.b{background:#232323;color:#fff;}
+  .spring-tag.n{background:var(--bone-dim);color:#7a7f75;}
+  .len-tag{font-size:0.68rem;padding:1px 7px;border-radius:20px;background:#e9ede4;color:var(--sage-dark);font-weight:600;}
+  .empty{text-align:center;color:#7a7f75;padding:50px 20px;border:1px dashed var(--line);border-radius:10px;font-size:0.92rem;}
+  .foot-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+  a.link{color:var(--sage-dark);}
+  .runtime{font-size:0.82rem;color:#5b6058;margin-bottom:12px;}
+  .runtime b{font-variant-numeric:tabular-nums;}
+  .runtime.over{color:var(--clay);}
+  .paired-note{font-size:0.72rem;color:#7a7f75;margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><h1>Flow</h1><p>Class flow &amp; playlist builder</p></div>
+    <div id="spotifyBadge"></div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="panel">
+        <h2>Move library</h2>
+        <label for="sheetId">Google Sheet ID or URL</label>
+        <input type="text" id="sheetId" placeholder="Paste the sheet link or ID" />
+        <div class="hint">Columns: <b>Block</b>, <b>Exercise</b>, <b>Springs</b>, <b>Length</b>, plus your location / face direction / straps columns. Share as "Anyone with the link."</div>
+        <button class="btn block" id="loadSheetBtn">Load moves</button>
+        <div id="sheetStatus"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Spotify</h2>
+        <label for="spClientId">Client ID</label>
+        <input type="text" id="spClientId" placeholder="From developer.spotify.com" />
+        <div class="hint">Register free at <a class="link" href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a>. Redirect URI must be exactly:<br><code id="redirectUriDisplay" style="word-break:break-all;"></code></div>
+        <button class="btn block ghost" id="connectSpotifyBtn">Connect Spotify</button>
+        <label for="refMatch">Reference playlists (match by name)</label>
+        <input type="text" id="refMatch" placeholder="e.g. C45" value="C45" />
+        <div class="hint">Finds your own playlists whose name contains this text (works with any playlist visible in your account, folder or not — the Spotify API can't see folders). Used as taste inspiration and to make sure new playlists never repeat those songs.</div>
+        <div id="spotifyStatus"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Class shape</h2>
+        <label class="row" style="margin-top:0;">
+          <input type="checkbox" id="includeFinisher" checked />
+          <span style="font-size:0.86rem;">Include a finisher</span>
+        </label>
+        <div id="blockCounts" style="margin-top:10px;"></div>
+        <div class="hint">Warm up first, cool down (2 min) last. Leg and oblique blocks run as matched left + right pairs. Moves marked as 1 minute get grouped several to a song.</div>
+        <button class="btn block" id="generateBtn" disabled>Generate flow</button>
+      </div>
+    </div>
+
+    <div>
+      <div id="flowArea"><div class="empty">Load your move library, then generate a flow to see it here.</div></div>
+      <div id="playlistArea"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= CONSTANTS ================= */
+const BLOCK_LABELS={warm_up:"Warm up",center_core:"Center core",leg:"Leg",upper_body:"Upper body",obliques:"Obliques",finisher:"Finisher",cool_down:"Cool down"};
+const BLOCK_TYPES=Object.keys(BLOCK_LABELS);
+const PAIRED_BLOCKS=["leg","obliques"];   // run as left + right
+const COOLDOWN_SECONDS=120;
+const TARGET_SECONDS=45*60;
+const PAIR_TOLERANCE=15;                  // seconds: matched L/R songs must be within this
+const MINUTE_MOVE_SECONDS=60;
+const REDIRECT_URI=location.origin+location.pathname;
+document.getElementById("redirectUriDisplay").textContent=REDIRECT_URI;
+
+/* ================= STATE ================= */
+let moveLibrary={warm_up:[],center_core:[],leg:[],upper_body:[],obliques:[],finisher:[],cool_down:[]};
+let currentFlow=null;
+let trackPool=[];
+let spotifyToken=localStorage.getItem("flow_sp_token")||null;
+let spotifyTokenExpiry=Number(localStorage.getItem("flow_sp_expiry")||0);
+
+/* ================= UTIL ================= */
+function el(tag,attrs={},...children){
+  const n=document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs)){
+    if(k==="class")n.className=v;
+    else if(k.startsWith("on")&&typeof v==="function")n.addEventListener(k.slice(2),v);
+    else n.setAttribute(k,v);
+  }
+  children.flat().forEach(c=>{if(c==null)return;n.appendChild(typeof c==="string"?document.createTextNode(c):c);});
+  return n;
+}
+function extractId(input,kind){
+  input=(input||"").trim();
+  const re=kind==="playlist"?/playlist\/([a-zA-Z0-9]+)/:/\/d\/([a-zA-Z0-9-_]+)/;
+  const m=input.match(re);
+  return m?m[1]:input;
+}
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function pickRandom(arr,n=1){const p=[...arr],o=[];for(let i=0;i<n&&p.length;i++)o.push(p.splice(Math.floor(Math.random()*p.length),1)[0]);return o;}
+function fmt(sec){const m=Math.floor(sec/60),s=Math.round(sec%60);return `${m}:${String(s).padStart(2,"0")}`;}
+function springTag(raw){
+  const v=(raw||"").trim();
+  if(!v)return el("span",{class:"spring-tag n"},"tbd");
+  const m=v.match(/^(\d+)\s*([wb])$/i);
+  if(m){const c=m[2].toLowerCase()==="w"?"w":"b";return el("span",{class:`spring-tag ${c}`},`${m[1]} ${c==="w"?"white":"black"}`);}
+  return el("span",{class:"spring-tag n"},v);
+}
+function normalizeBlockName(raw){
+  const v=(raw||"").trim().toLowerCase().replace(/[\s_-]+/g," ");
+  if(/warm/.test(v))return "warm_up";
+  if(/cool/.test(v))return "cool_down";
+  if(/finish/.test(v))return "finisher";
+  if(/oblique/.test(v))return "obliques";
+  if(/upper/.test(v))return "upper_body";
+  if(/leg|lower/.test(v))return "leg";
+  if(/core/.test(v))return "center_core";
+  return null;
+}
+// Length column -> 'minute' or 'song'
+function normalizeLength(raw){
+  const v=(raw||"").trim().toLowerCase();
+  if(!v)return "song";
+  if(/min|:?\b1\b|60/.test(v)&&!/song|full/.test(v))return "minute";
+  return "song";
+}
+
+/* ================= SHEET ================= */
+function parseCSV(text){
+  const rows=[];let row=[],field="",q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){field+='"';i++;} else q=false; } else field+=c;
+    }else{
+      if(c==='"')q=true;
+      else if(c===','){row.push(field);field="";}
+      else if(c==='\n'){row.push(field);rows.push(row);row=[];field="";}
+      else if(c==='\r'){}
+      else field+=c;
+    }
+  }
+  if(field.length||row.length){row.push(field);rows.push(row);}
+  return rows;
+}
+async function loadSheet(){
+  const raw=document.getElementById("sheetId").value;
+  const s=document.getElementById("sheetStatus");
+  if(!raw){s.innerHTML="";s.appendChild(el("div",{class:"status err"},"Paste a sheet link or ID first."));return;}
+  const id=extractId(raw,"sheet");
+  s.innerHTML="";s.appendChild(el("div",{class:"status wait"},"Loading…"));
+  try{
+    const res=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=Sheet1`);
+    if(!res.ok)throw new Error("fetch");
+    const rows=parseCSV(await res.text()).filter(r=>r.some(c=>c&&c.trim()));
+    if(rows.length<2)throw new Error("empty");
+    const h=rows[0].map(x=>x.trim().toLowerCase());
+    const iBlock=h.indexOf("block"), iEx=h.indexOf("exercise");
+    if(iBlock===-1||iEx===-1)throw new Error("header");
+    const iSpring=h.findIndex(x=>x.includes("spring"));
+    const iLen=h.findIndex(x=>x.includes("length"));
+    const iLoc=h.findIndex(x=>x.includes("location"));
+    const iFace=h.findIndex(x=>x.includes("face"));
+    const iEquip=h.findIndex(x=>x.includes("strap")||x.includes("equip"));
+    const lib={warm_up:[],center_core:[],leg:[],upper_body:[],obliques:[],finisher:[],cool_down:[]};
+    let skipped=0;
+    for(const r of rows.slice(1)){
+      const name=(r[iEx]||"").trim();
+      if(!name)continue;
+      const type=normalizeBlockName(r[iBlock]);
+      if(!type){skipped++;continue;}
+      lib[type].push({
+        name,
+        springs:iSpring!==-1?(r[iSpring]||"").trim():"",
+        length:normalizeLength(iLen!==-1?r[iLen]:""),
+        location:iLoc!==-1?(r[iLoc]||"").trim():"",
+        face:iFace!==-1?(r[iFace]||"").trim():"",
+        equipment:iEquip!==-1?(r[iEquip]||"").trim():""
+      });
+    }
+    moveLibrary=lib;
+    const counts=BLOCK_TYPES.map(t=>`${BLOCK_LABELS[t]}: ${lib[t].length}`).join(" · ");
+    s.innerHTML="";
+    s.appendChild(el("div",{class:"status ok"},`Loaded. ${counts}${skipped?` (${skipped} rows skipped — unrecognized block)`:""}`));
+    if(iLen===-1)s.appendChild(el("div",{class:"status wait"},"No Length column found — treating every move as a full song."));
+    document.getElementById("generateBtn").disabled=false;
+  }catch(e){
+    s.innerHTML="";
+    s.appendChild(el("div",{class:"status err"},'Couldn\'t load that sheet. Check it\'s shared as "Anyone with the link" and the tab is named Sheet1.'));
+  }
+}
+document.getElementById("loadSheetBtn").addEventListener("click",loadSheet);
+
+/* ================= BLOCK COUNTS ================= */
+let blockCounts={center_core:2,leg:1,upper_body:2,obliques:1};
+function buildCountControls(){
+  const w=document.getElementById("blockCounts");w.innerHTML="";
+  [["center_core","Center core blocks"],["leg","Leg pairs (L+R)"],["upper_body","Upper body blocks"],["obliques","Oblique pairs (L+R)"]]
+  .forEach(([k,label])=>{
+    const c=el("span",{},String(blockCounts[k]));
+    w.appendChild(el("div",{class:"count-row"},
+      el("span",{class:"name"},label),
+      el("div",{class:"stepper"},
+        el("button",{onclick:()=>{blockCounts[k]=Math.max(0,blockCounts[k]-1);c.textContent=blockCounts[k];}},"–"),
+        c,
+        el("button",{onclick:()=>{blockCounts[k]=Math.min(8,blockCounts[k]+1);c.textContent=blockCounts[k];}},"+")
+      )));
+  });
+}
+buildCountControls();
+
+/* ================= SLOT BUILDING =================
+   A slot = one song. It holds either one full-song move,
+   or several 1-minute moves grouped together.             */
+function groupMovesIntoSlots(moves){
+  const slots=[];let bucket=[];
+  // split a run of 1-minute moves into balanced groups of 2-3
+  const flushBucket=()=>{
+    if(!bucket.length)return;
+    const n=bucket.length;
+    let sizes=[];
+    if(n<=3){sizes=[n];}
+    else{
+      const groups=Math.ceil(n/3);
+      const base=Math.floor(n/groups), extra=n%groups;
+      sizes=Array.from({length:groups},(_,i)=>base+(i<extra?1:0));
+    }
+    let idx=0;
+    sizes.forEach(sz=>{slots.push({moves:bucket.slice(idx,idx+sz),track:null});idx+=sz;});
+    bucket=[];
+  };
+  moves.forEach(mv=>{
+    if(mv.length==="minute"){bucket.push(mv);}
+    else{flushBucket();slots.push({moves:[mv],track:null});}
+  });
+  flushBucket();
+  return slots;
+}
+function slotNeededSeconds(slot){
+  if(slot.moves.every(m=>m.length==="minute"))return slot.moves.length*MINUTE_MOVE_SECONDS;
+  return 0; // full-song move: any song length works
+}
+
+/* ================= FLOW GENERATION ================= */
+function makeTracker(){
+  const used={};
+  return {take(type,n){
+    used[type]=used[type]||new Set();
+    const pool=moveLibrary[type]||[];
+    let avail=pool.filter(m=>!used[type].has(m.name));
+    if(avail.length<n){used[type]=new Set();avail=pool;}
+    const picked=pickRandom(avail,n);
+    picked.forEach(m=>used[type].add(m.name));
+    return picked;
+  }};
+}
+function makeBlock(type,moves,side){
+  return {type,side:side||null,slots:groupMovesIntoSlots(moves)};
+}
+function generateFlow(){
+  if(!moveLibrary.warm_up.length&&!moveLibrary.center_core.length){alert("Load your move library first.");return;}
+  const t=makeTracker();
+  const blocks=[];
+  blocks.push(makeBlock("warm_up",t.take("warm_up",1)));
+
+  const middle=[];
+  for(let i=0;i<blockCounts.center_core;i++)middle.push([makeBlock("center_core",t.take("center_core",1))]);
+  for(let i=0;i<blockCounts.upper_body;i++)middle.push([makeBlock("upper_body",t.take("upper_body",1))]);
+  // paired blocks: same moves, left then right, songs matched later
+  for(let i=0;i<blockCounts.leg;i++){
+    const n=3+Math.round(Math.random());
+    const mv=t.take("leg",n);
+    const pairId="leg"+i;
+    const L=makeBlock("leg",mv,"left"),R=makeBlock("leg",mv,"right");
+    L.pairId=R.pairId=pairId;
+    middle.push([L,R]);
+  }
+  for(let i=0;i<blockCounts.obliques;i++){
+    const mv=t.take("obliques",1);
+    const pairId="ob"+i;
+    const L=makeBlock("obliques",mv,"left"),R=makeBlock("obliques",mv,"right");
+    L.pairId=R.pairId=pairId;
+    middle.push([L,R]);
+  }
+  // shuffle groups, keeping L/R adjacent
+  shuffle(middle).forEach(g=>blocks.push(...g));
+
+  if(document.getElementById("includeFinisher").checked&&moveLibrary.finisher.length)
+    blocks.push(makeBlock("finisher",t.take("finisher",1)));
+
+  const cd=moveLibrary.cool_down.length?t.take("cool_down",1):[{name:"Cool down",springs:"",length:"song"}];
+  const cdBlock=makeBlock("cool_down",cd);
+  cdBlock.fixed=COOLDOWN_SECONDS;
+  blocks.push(cdBlock);
+
+  currentFlow=blocks;
+  renderFlow();
+}
+document.getElementById("generateBtn").addEventListener("click",generateFlow);
+
+/* ================= SONG FITTING =================
+   Songs are chosen to fit each slot, not the other way round.
+   No artist appears more than once across the whole playlist. */
+function trackArtists(t){ return (t.artist||"").split(",").map(s=>s.trim()).filter(Boolean); }
+function fitSongsToFlow(){
+  if(!currentFlow)return;
+  if(!trackPool.length)return;
+  const avail=shuffle(trackPool);
+  const usedUris=new Set();
+  const usedArtists=new Set();
+  const freshArtist=t=>trackArtists(t).every(a=>!usedArtists.has(a));
+  const free=(requireFreshArtist=true)=>avail.filter(t=>{
+    if(usedUris.has(t.uri))return false;
+    if(requireFreshArtist&&!freshArtist(t))return false;
+    return true;
+  });
+  const commit=t=>{ usedUris.add(t.uri); trackArtists(t).forEach(a=>usedArtists.add(a)); };
+
+  // pick one track >= needed seconds (closest fit), never repeating an artist
+  function takeSingle(needed){
+    let pool=free(true);
+    if(!pool.length)pool=free(false);          // relax artist rule only if truly out of options
+    if(!pool.length)return null;
+    let cands=needed>0?pool.filter(t=>t.duration_ms/1000>=needed):pool;
+    if(!cands.length)cands=pool;
+    const pick=needed>0
+      ? cands.reduce((a,b)=>Math.abs(b.duration_ms/1000-needed)<Math.abs(a.duration_ms/1000-needed)?b:a)
+      : cands[Math.floor(Math.random()*cands.length)];
+    commit(pick);
+    return pick;
+  }
+  // pick two DIFFERENT-artist tracks within PAIR_TOLERANCE of each other
+  function takePair(needed){
+    let pool=free(true).filter(t=>needed<=0||t.duration_ms/1000>=needed);
+    if(pool.length<2)pool=free(true);
+    if(pool.length<2)pool=free(false).filter(t=>needed<=0||t.duration_ms/1000>=needed);
+    if(pool.length<2)pool=free(false);
+    if(pool.length<2){const a=takeSingle(needed);return [a,a];}
+    const sorted=[...pool].sort((a,b)=>a.duration_ms-b.duration_ms);
+    let best=null,bestScore=Infinity;
+    for(let i=0;i<sorted.length;i++){
+      for(let j=i+1;j<sorted.length;j++){
+        const a=sorted[i],b=sorted[j];
+        const d=Math.abs(a.duration_ms-b.duration_ms)/1000;
+        if(d>PAIR_TOLERANCE)break; // sorted by duration, so once we exceed tolerance stop widening from i
+        const sameArtist=trackArtists(a).some(x=>trackArtists(b).includes(x));
+        if(sameArtist)continue;
+        const avg=(a.duration_ms+b.duration_ms)/2000;
+        const fit=needed>0?Math.abs(avg-needed):0;
+        const score=d+fit;
+        if(score<bestScore){bestScore=score;best=[a,b];}
+      }
+    }
+    if(!best){ // nothing within tolerance — take the closest two different-artist tracks available
+      let gap=Infinity;
+      for(let i=0;i<sorted.length;i++){
+        for(let j=i+1;j<sorted.length;j++){
+          if(trackArtists(sorted[i]).some(x=>trackArtists(sorted[j]).includes(x)))continue;
+          const d=Math.abs(sorted[i].duration_ms-sorted[j].duration_ms);
+          if(d<gap){gap=d;best=[sorted[i],sorted[j]];}
+        }
+      }
+    }
+    if(!best) best=[sorted[0],sorted[1]]; // last resort
+    best.forEach(commit);
+    return best;
+  }
+
+  const handledPairs=new Set();
+  currentFlow.forEach((block,bi)=>{
+    if(block.fixed)return;
+    if(block.pairId){
+      if(handledPairs.has(block.pairId))return;
+      handledPairs.add(block.pairId);
+      const partner=currentFlow.find(b=>b.pairId===block.pairId&&b!==block);
+      block.slots.forEach((slot,si)=>{
+        const needed=slotNeededSeconds(slot);
+        const [a,b]=takePair(needed);
+        slot.track=a;
+        if(partner&&partner.slots[si])partner.slots[si].track=b;
+      });
+    }else{
+      block.slots.forEach(slot=>{slot.track=takeSingle(slotNeededSeconds(slot));});
+    }
+  });
+  renderFlow();
+}
+
+/* ================= RENDER ================= */
+function flowRuntime(){
+  let s=0;
+  currentFlow.forEach(b=>{
+    if(b.fixed){s+=b.fixed;return;}
+    b.slots.forEach(sl=>{ s+= sl.track?sl.track.duration_ms/1000:(slotNeededSeconds(sl)||210); });
+  });
+  return s;
+}
+function renderFlow(){
+  const area=document.getElementById("flowArea");area.innerHTML="";
+  if(!currentFlow){area.appendChild(el("div",{class:"empty"},"Generate a flow to see it here."));return;}
+  const total=flowRuntime();
+  const songCount=currentFlow.reduce((n,b)=>n+(b.fixed?0:b.slots.length),0);
+  const hasSongs=currentFlow.some(b=>!b.fixed&&b.slots.some(s=>s.track));
+  const over=Math.abs(total-TARGET_SECONDS)>150;
+  area.appendChild(el("div",{class:"runtime"+(over?" over":"")},
+    el("b",{},fmt(total)), ` of 45:00 target · ${songCount} songs · ${currentFlow.length} blocks`,
+    hasSongs?"":" (estimated — fit songs to see real times)"
+  ));
+  currentFlow.forEach((b,i)=>area.appendChild(renderBlock(b,i)));
+  area.appendChild(el("div",{class:"foot-actions"},
+    el("button",{class:"btn ghost",onclick:generateFlow},"Regenerate whole flow"),
+    el("button",{class:"btn",onclick:runPlaylistFlow},hasSongs?"Re-fit songs":"Fit songs to flow"),
+    hasSongs?el("button",{class:"btn",onclick:createPlaylist},"Create playlist on Spotify"):null
+  ));
+}
+function renderBlock(block,bi){
+  const sideLabel=block.side?` — ${block.side} leg`.replace("leg",block.type==="obliques"?"side":"leg"):"";
+  const card=el("div",{class:`block-card ${block.type}`});
+  card.appendChild(el("div",{class:"head"},
+    el("div",{class:"label"},`${BLOCK_LABELS[block.type]}${sideLabel}`),
+    el("div",{class:"meta"},block.fixed?fmt(block.fixed):`${block.slots.length} song${block.slots.length>1?"s":""}`)
+  ));
+  if(block.pairId&&block.side==="left")
+    card.appendChild(el("div",{class:"paired-note"},"Paired with the right side — songs matched within 15s"));
+  if(!block.fixed)
+    card.appendChild(el("button",{class:"btn ghost small",style:"margin-top:8px;",onclick:()=>regenBlock(block)},"Regenerate this block"));
+
+  block.slots.forEach((slot,si)=>{
+    const s=el("div",{class:"slot"});
+    if(!block.fixed){
+      s.appendChild(el("div",{class:"slot-song"},
+        slot.track
+          ? el("span",{},`♪ ${slot.track.name} — ${slot.track.artist}`)
+          : el("span",{class:"nosong"},"no song yet"),
+        slot.track?el("span",{},fmt(slot.track.duration_ms/1000)):null
+      ));
+    }
+    slot.moves.forEach((mv,mi)=>{
+      s.appendChild(el("div",{class:"move-row"},
+        el("div",{class:"info"},
+          el("div",{class:"mv-name"},mv.name),
+          el("div",{class:"mv-tags"},springTag(mv.springs),
+            mv.length==="minute"?el("span",{class:"len-tag"},"1 min"):null),
+          (mv.location||mv.face||mv.equipment)
+            ? el("div",{class:"mv-details"},[mv.location,mv.face,mv.equipment].filter(Boolean).join(" · "))
+            : null
+        ),
+        block.fixed?null:el("button",{class:"icon-btn",title:"Swap move",onclick:()=>swapMove(block,si,mi)},"⇄")
+      ));
+    });
+    card.appendChild(s);
+  });
+  return card;
+}
+function regenBlock(block){
+  const moveCount=block.slots.reduce((n,s)=>n+s.moves.length,0);
+  const fresh=pickRandom(moveLibrary[block.type],moveCount);
+  block.slots=groupMovesIntoSlots(fresh);
+  if(block.pairId){
+    const partner=currentFlow.find(b=>b.pairId===block.pairId&&b!==block);
+    if(partner)partner.slots=groupMovesIntoSlots(fresh);
+  }
+  renderFlow();
+}
+function swapMove(block,si,mi){
+  const pool=moveLibrary[block.type]||[];
+  const current=block.slots[si].moves[mi].name;
+  const opts=pool.filter(m=>m.name!==current);
+  if(!opts.length)return;
+  const next=pickRandom(opts,1)[0];
+  block.slots[si].moves[mi]=next;
+  if(block.pairId){
+    const partner=currentFlow.find(b=>b.pairId===block.pairId&&b!==block);
+    if(partner&&partner.slots[si])partner.slots[si].moves[mi]=next;
+  }
+  renderFlow();
+}
+
+/* ================= SPOTIFY AUTH (PKCE) ================= */
+function randString(len){
+  const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const arr=new Uint8Array(len);crypto.getRandomValues(arr);
+  return [...arr].map(b=>chars[b%chars.length]).join("");
+}
+async function sha256b64url(input){
+  const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(input));
+  let s="";new Uint8Array(d).forEach(b=>s+=String.fromCharCode(b));
+  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function updateBadge(){
+  const b=document.getElementById("spotifyBadge");b.innerHTML="";
+  if(spotifyToken&&Date.now()<spotifyTokenExpiry)
+    b.appendChild(el("span",{class:"status ok",style:"padding:6px 12px;"},"Spotify connected"));
+}
+async function connectSpotify(){
+  const clientId=document.getElementById("spClientId").value.trim();
+  const s=document.getElementById("spotifyStatus");
+  if(!clientId){s.innerHTML="";s.appendChild(el("div",{class:"status err"},"Enter your Client ID first."));return;}
+  localStorage.setItem("flow_sp_client_id",clientId);
+  const verifier=randString(64);
+  sessionStorage.setItem("flow_sp_verifier",verifier);
+  const params=new URLSearchParams({
+    client_id:clientId,response_type:"code",redirect_uri:REDIRECT_URI,
+    code_challenge_method:"S256",code_challenge:await sha256b64url(verifier),
+    scope:"playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative"
+  });
+  location.href="https://accounts.spotify.com/authorize?"+params;
+}
+document.getElementById("connectSpotifyBtn").addEventListener("click",connectSpotify);
+async function handleCallback(){
+  const code=new URLSearchParams(location.search).get("code");
+  if(!code)return;
+  const clientId=localStorage.getItem("flow_sp_client_id");
+  const verifier=sessionStorage.getItem("flow_sp_verifier");
+  const s=document.getElementById("spotifyStatus");
+  if(!clientId||!verifier)return;
+  s.innerHTML="";s.appendChild(el("div",{class:"status wait"},"Finishing connection…"));
+  try{
+    const res=await fetch("https://accounts.spotify.com/api/token",{
+      method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:REDIRECT_URI,client_id:clientId,code_verifier:verifier})
+    });
+    if(!res.ok)throw new Error();
+    const d=await res.json();
+    spotifyToken=d.access_token;spotifyTokenExpiry=Date.now()+d.expires_in*1000;
+    localStorage.setItem("flow_sp_token",spotifyToken);
+    localStorage.setItem("flow_sp_expiry",String(spotifyTokenExpiry));
+    s.innerHTML="";s.appendChild(el("div",{class:"status ok"},"Connected to Spotify."));
+    updateBadge();history.replaceState({},"",REDIRECT_URI);
+  }catch(e){
+    s.innerHTML="";s.appendChild(el("div",{class:"status err"},"Couldn't finish connecting. Try again."));
+  }
+}
+
+/* ================= SPOTIFY API ================= */
+async function spFetch(path,opts={}){
+  const res=await fetch(`https://api.spotify.com/v1${path}`,{
+    ...opts,headers:{...(opts.headers||{}),Authorization:`Bearer ${spotifyToken}`,"Content-Type":"application/json"}
+  });
+  if(!res.ok)throw new Error(`Spotify ${res.status}: ${await res.text()}`);
+  return res.status===204?null:res.json();
+}
+let excludeUris=new Set();       // every track already on a C45-folder playlist
+async function findReferencePlaylists(){
+  const matchText=(document.getElementById("refMatch").value||"").trim().toLowerCase();
+  if(!matchText)throw new Error("Enter the text to match your reference playlists by (e.g. C45).");
+  let playlists=[],next="/me/playlists?limit=50";
+  while(next){
+    const d=await spFetch(next.replace("https://api.spotify.com/v1",""));
+    playlists.push(...d.items);
+    next=d.next;
+  }
+  const matched=playlists.filter(p=>p.name&&p.name.toLowerCase().includes(matchText));
+  if(!matched.length)throw new Error(`No playlists found matching "${matchText}". Check the exact text and that they're in your account.`);
+  return matched;
+}
+async function loadTrackPool(){
+  const matched=await findReferencePlaylists();
+
+  // pull every track from the reference playlists: build exclude set + artist taste profile
+  const refTracks=[];
+  for(const pl of matched){
+    let next=`/playlists/${pl.id}/tracks?limit=100`;
+    while(next){
+      const d=await spFetch(next.replace("https://api.spotify.com/v1",""));
+      d.items.filter(i=>i.track&&i.track.uri).forEach(i=>{
+        excludeUris.add(i.track.uri);
+        refTracks.push(i.track);
+      });
+      next=d.next;
+    }
+  }
+  const refArtistIds=[...new Set(refTracks.flatMap(t=>(t.artists||[]).map(a=>a.id)).filter(Boolean))];
+
+  // look up genres for those artists (batches of 50), then rank genres by frequency
+  const genreCounts={};
+  for(let i=0;i<refArtistIds.length;i+=50){
+    const d=await spFetch(`/artists?ids=${refArtistIds.slice(i,i+50).join(",")}`);
+    d.artists.forEach(a=>(a.genres||[]).forEach(g=>{genreCounts[g]=(genreCounts[g]||0)+1;}));
+  }
+  const topGenres=Object.entries(genreCounts).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0]);
+  if(!topGenres.length)topGenres.push("pop"); // fallback if genre data is sparse
+
+  // search for candidate tracks in those genres — Spotify's recommendations/related-artists
+  // endpoints are deprecated for new apps, so genre search is the reliable path left
+  const candidates=new Map();
+  for(const genre of topGenres){
+    for(const offset of [0,50]){
+      const d=await spFetch(`/search?q=${encodeURIComponent('genre:"'+genre+'"')}&type=track&limit=50&offset=${offset}`);
+      (d.tracks?.items||[]).forEach(t=>{
+        if(!t.uri||excludeUris.has(t.uri)||candidates.has(t.uri))return;
+        candidates.set(t.uri,{
+          uri:t.uri,name:t.name,
+          artist:(t.artists||[]).map(a=>a.name).join(", "),
+          duration_ms:t.duration_ms
+        });
+      });
+    }
+  }
+  const pool=[...candidates.values()];
+  if(!pool.length)throw new Error("Couldn't find enough new tracks from your reference playlists' genres. Try widening your C45 folder or check it has enough variety.");
+  trackPool=pool;
+}
+
+async function runPlaylistFlow(){
+  const s=document.getElementById("playlistArea");s.innerHTML="";
+  if(!spotifyToken||Date.now()>spotifyTokenExpiry){
+    s.appendChild(el("div",{class:"panel"},el("div",{class:"status err"},"Connect Spotify first (left panel).")));return;
+  }
+  s.appendChild(el("div",{class:"panel"},el("div",{class:"status wait"},"Fetching songs…")));
+  try{
+    if(!trackPool.length)await loadTrackPool();
+    fitSongsToFlow();
+    s.innerHTML="";
+  }catch(e){
+    s.innerHTML="";s.appendChild(el("div",{class:"panel"},el("div",{class:"status err"},e.message)));
+  }
+}
+async function createPlaylist(){
+  const s=document.getElementById("playlistArea");s.innerHTML="";
+  s.appendChild(el("div",{class:"panel"},el("div",{class:"status wait"},"Creating playlist…")));
+  try{
+    const me=await spFetch("/me");
+    const pl=await spFetch(`/users/${me.id}/playlists`,{method:"POST",body:JSON.stringify({
+      name:`Class flow — ${new Date().toLocaleDateString()}`,description:"Generated with Flow",public:false})});
+    const uris=[];
+    currentFlow.forEach(b=>{if(!b.fixed)b.slots.forEach(sl=>{if(sl.track)uris.push(sl.track.uri);});});
+    for(let i=0;i<uris.length;i+=100)
+      await spFetch(`/playlists/${pl.id}/tracks`,{method:"POST",body:JSON.stringify({uris:uris.slice(i,i+100)})});
+    s.innerHTML="";
+    s.appendChild(el("div",{class:"panel"},
+      el("h2",{},"Playlist created"),
+      el("div",{class:"status ok"},`"${pl.name}" is on your Spotify. `,
+        el("a",{class:"link",href:pl.external_urls.spotify,target:"_blank",rel:"noopener"},"Open ↗"))
+    ));
+  }catch(e){
+    s.innerHTML="";s.appendChild(el("div",{class:"panel"},el("div",{class:"status err"},e.message)));
+  }
+}
+
+/* ================= INIT ================= */
+["sheetId","spClientId","refMatch"].forEach(id=>{
+  const saved=localStorage.getItem("flow_"+id);
+  if(saved)document.getElementById(id).value=saved;
+  document.getElementById(id).addEventListener("change",e=>localStorage.setItem("flow_"+id,e.target.value));
+});
+if(localStorage.getItem("flow_sp_client_id")&&!document.getElementById("spClientId").value)
+  document.getElementById("spClientId").value=localStorage.getItem("flow_sp_client_id");
+document.getElementById("refMatch").addEventListener("change",()=>{trackPool=[];excludeUris=new Set();});
+updateBadge();
+handleCallback();
+</script>
+</body>
+</html>
